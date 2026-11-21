@@ -1,0 +1,26 @@
+Senior Backend Engineer – Northwind Labs (fictional)
+
+About the role
+Northwind Labs is hiring a Senior Backend Engineer to build the services behind our logistics platform.
+
+Responsibilities
+- Design, build and maintain scalable RESTful APIs in Node.js.
+- Own background job processing and queue-based workflows.
+- Improve database performance through indexing and query optimization.
+- Set up and maintain CI/CD pipelines for automated deployments.
+- Collaborate with product and frontend teams in an Agile environment.
+
+Requirements
+- 5+ years of professional software development experience.
+- Strong experience with Node.js and TypeScript.
+- Hands-on experience with MongoDB and Redis.
+- Experience with Docker and AWS.
+- Experience with React.js for internal tools.
+
+Nice to have
+- NestJS
+- AWS Lambda
+- Kubernetes
+- GraphQL
+
+What we offer: flexible hours, learning budget, health insurance.

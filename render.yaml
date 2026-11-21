@@ -1,0 +1,37 @@
+# Render Blueprint for the backend only (the frontend is deployed separately on Netlify).
+# Values marked `sync: false` are entered in the Render dashboard and never stored in Git.
+services:
+  - type: web
+    name: ai-resume-builder-api
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm ci --omit=dev
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "22"
+      - key: TRUST_PROXY
+        value: "1"
+      - key: CLIENT_URL # your Netlify URL, e.g. https://your-site.netlify.app
+        sync: false
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL # verify with `npm run smoke:gemini` before deploying
+        sync: false
+      - key: GEMINI_FALLBACK_MODELS # optional, comma-separated
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false

@@ -1,0 +1,81 @@
+{
+  "personalInfo": {
+    "fullName": "ALEX MORGAN",
+    "location": "Springfield, Exampleland",
+    "phone": "+00 5550100200",
+    "email": "alex.morgan@example.com",
+    "linkedin": "linkedin.com/in/alex-morgan-example",
+    "github": "github.com/alexmorgan-example",
+    "other": []
+  },
+  "headline": "Full Stack Developer | Node.js | React.js",
+  "summary": "Full Stack Developer with 4+ years of experience building web applications using Node.js, Express.js, React.js, TypeScript, and PostgreSQL. Experienced in REST API design, background job processing, and automated deployments. Works in Agile teams and ships production-ready features end to end.",
+  "technicalSkills": [
+    { "category": "Languages", "items": ["JavaScript (ES6+)", "TypeScript", "SQL"] },
+    { "category": "Backend", "items": ["Node.js", "Express.js", "RESTful APIs", "JWT Authentication", "Role-Based Access Control"] },
+    { "category": "Frontend", "items": ["React.js", "Redux Toolkit", "Tailwind CSS", "Responsive Design"] },
+    { "category": "Databases", "items": ["PostgreSQL", "MongoDB", "Redis"] },
+    { "category": "Cloud & DevOps", "items": ["AWS EC2", "Docker", "GitHub Actions", "CI/CD"] }
+  ],
+  "experience": [
+    {
+      "company": "Example Corp Pvt. Ltd",
+      "location": "Springfield, Exampleland",
+      "title": "Senior Software Engineer",
+      "startDate": "Jan 2024",
+      "endDate": "Present",
+      "bullets": [
+        "Designed and built 30+ RESTful APIs in Node.js/Express.js for order processing and inventory synchronisation.",
+        "Implemented background job processing with Redis queues, handling 50,000+ records per run with retries.",
+        "Reduced average API response time by ~35% by adding PostgreSQL indexes and query optimisation.",
+        "Automated CI/CD pipelines with GitHub Actions, cutting deployment time from 40 to 12 minutes."
+      ]
+    },
+    {
+      "company": "Sample Labs",
+      "location": "Shelbyville, Exampleland",
+      "title": "Software Engineer",
+      "startDate": "Jun 2021",
+      "endDate": "Dec 2023",
+      "bullets": [
+        "Built reusable React.js components and Redux Toolkit state management for an internal dashboard.",
+        "Integrated third-party payment and messaging APIs into production applications.",
+        "Collaborated with cross-functional teams in two-week Agile sprints."
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "name": "Inventory Tracker",
+      "technologies": ["Node.js", "Express.js", "React.js", "PostgreSQL", "Redis"],
+      "bullets": [
+        "Real-time stock tracking with role-based access for warehouse and admin users.",
+        "Scheduled reports exported as CSV and emailed to stakeholders."
+      ]
+    },
+    {
+      "name": "Team Expenses (Web & Mobile Application)",
+      "technologies": ["React.js", "React Native", "Node.js", "MongoDB"],
+      "bullets": ["Expense submission with multi-level approvals and reimbursement tracking."]
+    }
+  ],
+  "education": [
+    {
+      "institution": "Example Institute of Technology",
+      "location": "Springfield, Exampleland",
+      "degree": "Bachelor of Science – Computer Science",
+      "score": "GPA: 3.6",
+      "startDate": "Aug 2017",
+      "endDate": "May 2021"
+    }
+  ],
+  "achievements": ["Received the Engineering Excellence award for platform reliability work."],
+  "sectionOrder": [
+    { "key": "summary", "heading": "SUMMARY" },
+    { "key": "technicalSkills", "heading": "TECHNICAL SKILLS" },
+    { "key": "experience", "heading": "PROFESSIONAL EXPERIENCE" },
+    { "key": "projects", "heading": "PROJECTS" },
+    { "key": "education", "heading": "EDUCATION" },
+    { "key": "achievements", "heading": "ACHIEVEMENTS" }
+  ]
+}

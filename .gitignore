@@ -1,0 +1,83 @@
+# =============================================================================
+# PRIVACY: resumes, generated documents, personal data and credentials must
+# never be committed. The patterns below are deliberately broad. If a file is
+# genuinely safe to commit, add a narrow "!" exception for it rather than
+# loosening a rule. The pre-commit hook in .githooks/ enforces the same rules.
+# =============================================================================
+
+# --- Credentials & environment ----------------------------------------------
+.env
+.env.*
+!.env.example
+*.env
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+credentials*.json
+service-account*.json
+*secret*
+!**/*secret*.example
+.netlify/state.json
+.render/
+
+# --- Resume documents & generated files (personal data) ---------------------
+*.pdf
+*.doc
+*.docx
+*.odt
+*.rtf
+*.pages
+
+# --- Phase 1 research: personal data and generated artefacts ----------------
+research/phase1/original-resume.pdf
+research/phase1/output/
+research/**/output/
+research/**/*.png
+
+# --- Runtime uploads, temp files, extracted data ----------------------------
+uploads/
+tmp/
+temp/
+.tmp/
+**/private/
+**/local-data/
+*.local.json
+extracted-*.json
+master-resume*.json
+!**/fixtures/sample-*.json
+
+# --- Dependencies & builds --------------------------------------------------
+node_modules/
+dist/
+build/
+.vite/
+coverage/
+*.tsbuildinfo
+
+# --- Python (research tooling) ----------------------------------------------
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# --- Logs --------------------------------------------------------------------
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# --- OS / editor --------------------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+
+# --- Claude Code local settings ----------------------------------------------
+.claude/settings.local.json

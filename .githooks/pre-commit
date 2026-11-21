@@ -1,0 +1,40 @@
+#!/bin/sh
+# Blocks commits that would include personal resume files or credentials.
+# Enable once per clone:  git config core.hooksPath .githooks
+# Bypass (only if you are certain): git commit --no-verify
+
+fail=0
+staged=$(git diff --cached --name-only --diff-filter=ACMR)
+[ -z "$staged" ] && exit 0
+
+# 1. Forbidden file names / locations
+blocked=$(printf '%s\n' "$staged" | grep -Ei \
+  -e '(^|/)\.env($|\.)' \
+  -e '\.(pdf|docx?|odt|rtf|pages|pem|key|p12|pfx)$' \
+  -e '(^|/)(uploads|tmp|temp|private|local-data)/' \
+  -e '^research/[^/]+/output/' \
+  -e '(^|/)(extracted-[^/]*|master-resume[^/]*)\.json$' \
+  | grep -Ev '(^|/)\.env\.example$')
+if [ -n "$blocked" ]; then
+  echo "pre-commit: refusing to commit private files:" >&2
+  printf '  %s\n' $blocked >&2
+  fail=1
+fi
+
+# 2. Secret-looking content in staged text (added lines only)
+secrets=$(git diff --cached -U0 --diff-filter=ACMR -- . ':(exclude).githooks/pre-commit' \
+  | grep -E '^\+' \
+  | grep -En \
+    -e 'AIza[0-9A-Za-z_-]{35}' \
+    -e 'mongodb(\+srv)?://[^:/@ ]+:[^@ ]+@' \
+    -e 'cloudinary://[0-9]+:[^@ ]+@' \
+    -e '-----BEGIN [A-Z ]*PRIVATE KEY-----' \
+    -e '(GEMINI_API_KEY|CLOUDINARY_API_SECRET|JWT_SECRET)=[^[:space:]]{8,}')
+if [ -n "$secrets" ]; then
+  echo "pre-commit: staged changes look like they contain credentials:" >&2
+  printf '%s\n' "$secrets" | cut -c1-120 >&2
+  fail=1
+fi
+
+[ $fail -eq 0 ] || echo "pre-commit: commit blocked. Unstage the files above (git restore --staged <file>)." >&2
+exit $fail

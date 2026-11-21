@@ -1,0 +1,12 @@
+Machine Learning Platform Engineer (fictional, Adventure Works)
+
+Requirements:
+- 6+ years of experience in data or ML infrastructure.
+- Expert in Python and Scala.
+- Production experience with Apache Spark, Airflow and Kubernetes.
+- Experience with Terraform and Google Cloud Platform.
+- Strong knowledge of distributed systems.
+
+Preferred:
+- Rust
+- Experience with Snowflake or BigQuery.
