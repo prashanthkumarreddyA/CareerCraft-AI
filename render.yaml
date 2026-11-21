@@ -17,7 +17,7 @@ services:
         value: "22"
       - key: TRUST_PROXY
         value: "1"
-      - key: CLIENT_URL # your Netlify URL, e.g. https://your-site.netlify.app
+      - key: CLIENT_URL # Netlify ORIGIN only, e.g. https://your-site.netlify.app (no /login, no trailing slash)
         sync: false
       - key: MONGODB_URI
         sync: false

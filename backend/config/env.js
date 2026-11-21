@@ -21,6 +21,28 @@ const list = (name, fallback) =>
     .map((v) => v.trim().replace(/\/+$/, ''))
     .filter(Boolean);
 
+/**
+ * CORS origins: scheme + host (+ port) only. A browser's Origin header never contains a path, so
+ * "https://site.netlify.app/login" is reduced to "https://site.netlify.app" (and reported by
+ * checkEnvironment). Entries that are not valid http(s) URLs are dropped and reported.
+ */
+export function parseOrigins(raw) {
+  const origins = [];
+  const adjusted = [];
+  const invalid = [];
+  for (const entry of String(raw ?? '').split(',').map((v) => v.trim()).filter(Boolean)) {
+    try {
+      const url = new URL(entry);
+      if (url.protocol !== 'http:' && url.protocol !== 'https:') throw new Error('not http(s)');
+      if (url.origin !== entry) adjusted.push(url.origin);
+      if (!origins.includes(url.origin)) origins.push(url.origin);
+    } catch {
+      invalid.push(entry);
+    }
+  }
+  return { origins, adjusted, invalid };
+}
+
 const nodeEnv = str('NODE_ENV', 'development');
 const isProduction = nodeEnv === 'production';
 
@@ -33,7 +55,7 @@ export const config = Object.freeze({
   isProduction,
   isTest: nodeEnv === 'test',
   port: int('PORT', 5000),
-  clientUrls: list('CLIENT_URL', isProduction ? '' : 'http://localhost:5180,http://127.0.0.1:5180,http://localhost:4180'),
+  clientUrls: parseOrigins(str('CLIENT_URL', isProduction ? '' : 'http://localhost:5180,http://127.0.0.1:5180,http://localhost:4180')).origins,
   trustProxy: int('TRUST_PROXY', isProduction ? 1 : 0),
   logLevel: str('LOG_LEVEL', 'info'),
   rateLimit: { windowMs: int('RATE_LIMIT_WINDOW_MS', 15 * 60 * 1000), max: int('RATE_LIMIT_MAX', 300) },
@@ -73,6 +95,10 @@ export function checkEnvironment() {
     .filter((n) => !(isProduction && REQUIRED_IN_PRODUCTION.includes(n)))
     .map((n) => (n === 'JWT_SECRET' ? 'JWT_SECRET is not set; using a temporary secret (sessions end on restart)' : `${n} is not set; dependent features are disabled`));
   if (config.jwt.secret && config.jwt.secret.length < 32) warnings.push('JWT_SECRET should be at least 32 characters');
+  const { adjusted, invalid } = parseOrigins(str('CLIENT_URL'));
+  if (adjusted.length) warnings.push(`CLIENT_URL entries were reduced to their origin (no path or trailing slash): ${adjusted.join(', ')}`);
+  if (invalid.length) warnings.push(`CLIENT_URL has ${invalid.length} entr${invalid.length === 1 ? 'y' : 'ies'} that are not http(s) URLs and were ignored`);
+  if (isProduction && !config.clientUrls.length) errors.push('CLIENT_URL must contain at least one valid origin, e.g. https://your-site.netlify.app');
   if (isProduction && config.clientUrls.some((u) => /localhost|127\.0\.0\.1/.test(u))) {
     warnings.push('CLIENT_URL contains a localhost origin in production');
   }
