@@ -51,7 +51,7 @@ export const contentHash = (content) => crypto.createHash('sha256').update(stabl
 export function verifyLockedFields(base, content) {
   const problems = [];
   const same = (a, b) => stable(a) === stable(b);
-  for (const key of ['personalInfo', 'headline', 'projects', 'education', 'achievements', 'sectionOrder']) {
+  for (const key of ['personalInfo', 'headline', 'projects', 'education', 'certifications', 'achievements', 'sectionOrder']) {
     if (!same(base[key], content[key])) problems.push(`${key} must not change`);
   }
   if (base.technicalSkills.length !== content.technicalSkills.length) problems.push('the number of skill groups changed');
@@ -68,7 +68,7 @@ export function verifyLockedFields(base, content) {
       if (b1.length !== b2.length) problems.push(`role ${i + 1}: the number of bullets changed`);
     });
   }
-  const allowed = new Set(['personalInfo', 'headline', 'summary', 'technicalSkills', 'experience', 'projects', 'education', 'achievements', 'sectionOrder']);
+  const allowed = new Set(['personalInfo', 'headline', 'summary', 'technicalSkills', 'experience', 'projects', 'education', 'certifications', 'achievements', 'sectionOrder']);
   for (const key of Object.keys(content)) if (!allowed.has(key)) problems.push(`unexpected field ${key}`);
   return problems;
 }
@@ -92,6 +92,7 @@ function searchableText(content) {
     ...content.experience.flatMap((e) => [e.title, ...e.bullets]),
     ...content.projects.flatMap((p) => [p.name, ...p.technologies, ...p.bullets]),
     ...content.education.map((e) => e.degree),
+    ...(content.certifications ?? []).map((c) => [c.name, c.issuer].filter(Boolean).join(' ')),
     ...content.achievements,
   ].join('\n');
 }

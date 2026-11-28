@@ -8,6 +8,11 @@ import { buildParagraphs, layoutResume, renderResumePdf, RESUME_TEMPLATE } from 
 const FONT_FILES = { regular: 'Regular', bold: 'Bold', italic: 'Italic', boldItalic: 'BoldItalic' };
 const FEATURES = { liga: false, kern: false, calt: false }; // same shaping options as the engine
 
+// Output template registry: only classic-v1 is active for now; additional templates can be registered here later.
+export const OUTPUT_TEMPLATES = {
+  'classic-v1': RESUME_TEMPLATE,
+};
+
 let cache;
 function fonts() {
   if (!cache) {
@@ -56,13 +61,50 @@ export function allResumeText(resume) {
 
 const paragraphText = (para) => para.runs.map((r) => r.text).join('');
 
+function formatCertificationLine(cert) {
+  const base = [cert.name, cert.issuer].filter(Boolean).join(' — ');
+  return cert.date ? `${base} (${cert.date})` : base;
+}
+
+/**
+ * Builds paragraphs using the Phase 1 engine, adding support for `certifications`
+ * without modifying the frozen `backend/pdf/resume-template.mjs` file.
+ */
+function buildExtendedParagraphs(resume, template = RESUME_TEMPLATE) {
+  const hasCertSection = (resume.certifications?.length ?? 0) > 0 && resume.sectionOrder.some((s) => s.key === 'certifications');
+  if (!hasCertSection) return buildParagraphs(resume, template);
+
+  const withoutCerts = {
+    ...resume,
+    sectionOrder: resume.sectionOrder.filter((s) => s.key !== 'certifications'),
+  };
+  const baseParagraphs = buildParagraphs(withoutCerts, template);
+
+  // Build paragraphs for certifications in the exact same heading + bullet style,
+  // inserted at the position specified by `sectionOrder`.
+  const certOrderIndex = resume.sectionOrder.findIndex((s) => s.key === 'certifications');
+  const certSection = resume.sectionOrder[certOrderIndex];
+  const certParagraphs = [
+    { style: 'heading', runs: [{ text: certSection.heading, bold: true }] },
+    ...resume.certifications.map((c) => ({ style: 'bullet', runs: [{ text: template.bullet + formatCertificationLine(c) }] })),
+  ];
+
+  // Find the heading index in baseParagraphs corresponding to the next section after certifications
+  const nextSection = resume.sectionOrder.slice(certOrderIndex + 1).find((s) => s.key !== 'certifications');
+  if (!nextSection) return [...baseParagraphs, ...certParagraphs];
+
+  const insertAt = baseParagraphs.findIndex((p) => p.style === 'heading' && paragraphText(p) === nextSection.heading);
+  if (insertAt === -1) return [...baseParagraphs, ...certParagraphs];
+  return [...baseParagraphs.slice(0, insertAt), ...certParagraphs, ...baseParagraphs.slice(insertAt)];
+}
+
 /**
  * Lays the resume out with the Phase 1 engine without producing a PDF.
  * Returns page count, overflowing lines and, per paragraph, its line count.
  */
 export function layoutCheck(resume, template = RESUME_TEMPLATE) {
   const { measuring } = fonts();
-  const paragraphs = buildParagraphs(resume, template);
+  const paragraphs = buildExtendedParagraphs(resume, template);
   const layout = layoutResume(paragraphs, measuring, template);
   const contentLeft = template.margin.left;
   const contentRight = template.page.width - template.margin.right;
@@ -88,9 +130,68 @@ export function layoutCheck(resume, template = RESUME_TEMPLATE) {
   };
 }
 
-/** Renders the PDF with the unchanged Phase 1 engine. */
-export async function renderPdf(resume, { title } = {}) {
-  const { bytes } = fonts();
-  const result = await renderResumePdf(resume, { pdfLib, fontkit, fontBytes: bytes, metadata: title ? { title } : {} });
-  return { bytes: Buffer.from(result.bytes), report: result.report };
+/** Renders the PDF with the Phase 1 engine (supports classic-v1 and optional certifications). */
+export async function renderPdf(resume, { title, templateId = 'classic-v1' } = {}) {
+  const template = OUTPUT_TEMPLATES[templateId] ?? RESUME_TEMPLATE;
+  const { bytes, measuring } = fonts();
+
+  const hasCerts = (resume.certifications?.length ?? 0) > 0 && resume.sectionOrder.some((s) => s.key === 'certifications');
+  if (!hasCerts) {
+    const result = await renderResumePdf(resume, { pdfLib, fontkit, fontBytes: bytes, template, metadata: title ? { title } : {} });
+    return { bytes: Buffer.from(result.bytes), report: result.report };
+  }
+
+  const { PDFDocument, rgb } = pdfLib;
+  const doc = await PDFDocument.create();
+  doc.registerFontkit(fontkit);
+  const embedOptions = { subset: false, features: FEATURES };
+  const paragraphs = buildExtendedParagraphs(resume, template);
+  const layout = layoutResume(paragraphs, measuring, template);
+  const used = new Set(layout.pages.flatMap((p) => p.lines.flatMap((l) => l.pieces.map((x) => x.font.key))));
+  const embedded = {};
+  for (const key of used) embedded[key] = await doc.embedFont(bytes[key], embedOptions);
+  for (const page of layout.pages) for (const line of page.lines) for (const piece of line.pieces) piece.font = embedded[piece.font.key];
+
+  const color = rgb(template.color.r, template.color.g, template.color.b);
+  const H = template.page.height;
+
+  for (const pageLayout of layout.pages) {
+    const page = doc.addPage([template.page.width, H]);
+    for (const line of pageLayout.lines) {
+      let x = line.x;
+      let runText = '';
+      let runFont = null;
+      let runX = x;
+      const flush = () => {
+        if (runText) page.drawText(runText, { x: runX, y: H - line.baseline, size: line.size, font: runFont, color });
+      };
+      for (const piece of line.pieces) {
+        if (piece.font !== runFont) {
+          flush();
+          runText = '';
+          runFont = piece.font;
+          runX = x;
+        }
+        runText += piece.text;
+        x += piece.width;
+      }
+      flush();
+    }
+    for (const r of pageLayout.rules) {
+      page.drawRectangle({ x: r.x0, y: H - r.top - r.thickness, width: r.x1 - r.x0, height: r.thickness, color });
+    }
+  }
+
+  doc.setTitle(title ?? `${resume.personalInfo.fullName} – Resume`);
+  doc.setAuthor(resume.personalInfo.fullName);
+  doc.setCreator('CareerCraft AI');
+  doc.setProducer('CareerCraft AI (pdf-lib)');
+
+  const last = layout.pages[layout.pages.length - 1].lines.at(-1);
+  const usable = H - template.margin.top - template.margin.bottom;
+  const report = {
+    pageCount: layout.pages.length,
+    lastPageFill: last ? +((last.baseline - template.margin.top) / usable).toFixed(3) : 0,
+  };
+  return { bytes: Buffer.from(await doc.save()), report };
 }

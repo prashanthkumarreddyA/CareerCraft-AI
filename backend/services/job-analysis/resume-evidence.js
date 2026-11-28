@@ -126,6 +126,11 @@ export function buildResumeEvidence(resume, { today = new Date() } = {}) {
     add(`edu.${e + 1}`, 'education', 'Education', text);
   });
 
+  (resume.certifications ?? []).forEach((cert, i) => {
+    const text = [cert.name, cert.issuer, cert.date].filter(Boolean).join(' — ');
+    add(`cert.${i + 1}`, 'certifications', 'Certifications', text);
+  });
+
   (resume.achievements ?? []).forEach((a, i) => add(`ach.${i + 1}`, 'achievements', 'Achievements', a));
 
   return {

@@ -75,6 +75,18 @@ const SECTION_RENDERERS = {
       ))}
     </div>
   ),
+  certifications: (r) => (
+    <div className="space-y-2">
+      {(r.certifications ?? []).map((c, i) => (
+        <div key={i}>
+          <p className="font-medium text-slate-900">{c.name}</p>
+          <p className="text-xs text-slate-500">
+            {[c.issuer, c.date, c.credentialId ? `ID: ${c.credentialId}` : ''].filter(Boolean).join(' · ')}
+          </p>
+        </div>
+      ))}
+    </div>
+  ),
   achievements: (r) => <Bullets items={r.achievements} />,
 };
 
@@ -88,11 +100,15 @@ export default function ResumeDetails({ resume }) {
         {resume.headline && <p className="font-medium">{resume.headline}</p>}
         <p className="mt-1 text-xs text-slate-500">{contact.join(' · ')}</p>
       </Section>
-      {resume.sectionOrder.map(({ key, heading }) => (
-        <Section key={key} title={heading}>
-          {SECTION_RENDERERS[key](resume)}
-        </Section>
-      ))}
+      {resume.sectionOrder.map(({ key, heading }) => {
+        const render = SECTION_RENDERERS[key];
+        if (!render) return null;
+        return (
+          <Section key={key} title={heading}>
+            {render(resume)}
+          </Section>
+        );
+      })}
     </div>
   );
 }

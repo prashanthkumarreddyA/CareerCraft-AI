@@ -44,7 +44,22 @@ export const educationSchema = z.strictObject({
   endDate: shortText,
 });
 
-export const SECTION_KEY_VALUES = ['summary', 'technicalSkills', 'experience', 'projects', 'education', 'achievements'];
+export const certificationSchema = z.strictObject({
+  name: shortText.min(1),
+  issuer: shortText.default(''),
+  date: shortText.default(''),
+  credentialId: shortText.default(''),
+});
+
+export const SECTION_KEY_VALUES = [
+  'summary',
+  'technicalSkills',
+  'experience',
+  'projects',
+  'education',
+  'certifications',
+  'achievements',
+];
 
 export const structuredResumeSchema = z.strictObject({
   personalInfo: personalInfoSchema,
@@ -54,6 +69,7 @@ export const structuredResumeSchema = z.strictObject({
   experience: z.array(experienceSchema).max(30),
   projects: z.array(projectSchema).max(30),
   education: z.array(educationSchema).max(20),
+  certifications: z.array(certificationSchema).max(30).optional(),
   achievements: z.array(text.min(1)).max(30),
   sectionOrder: z
     .array(z.strictObject({ key: z.enum(SECTION_KEY_VALUES), heading: shortText.min(1) }))

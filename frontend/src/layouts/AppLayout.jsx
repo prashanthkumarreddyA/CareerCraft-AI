@@ -24,7 +24,7 @@ export default function AppLayout() {
               <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-800 text-white">
                 <FileText className="h-4 w-4" aria-hidden="true" />
               </span>
-              <span className="hidden sm:inline">AI Resume Builder</span>
+              <span className="hidden sm:inline">CareerCraft AI</span>
             </Link>
             {signedIn && (
               <nav className="flex min-w-0 items-center gap-1 overflow-x-auto" aria-label="Main">

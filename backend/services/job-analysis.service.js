@@ -14,9 +14,10 @@ import { analyzeJobDescription, ANALYSIS_VERSION } from './job-analysis/analyze-
 
 const notFound = () => ApiError.notFound('Job analysis not found.', { code: 'JOB_ANALYSIS_NOT_FOUND' });
 
-/** Hash of the user's current master resume file (undefined when there is none). */
+/** Hash of the user's current master resume / profile (undefined when there is none). */
 export async function currentMasterHash(userId) {
-  return (await MasterResume.findOne({ userId }).select('fileHash').lean())?.fileHash;
+  const doc = await MasterResume.findOne({ userId }).select('profileHash fileHash').lean();
+  return doc ? (doc.profileHash ?? doc.fileHash) : undefined;
 }
 
 /** An analysis is stale when the master resume was replaced or deleted after it was made. */
@@ -64,10 +65,11 @@ export async function createJobAnalysis(userId, { companyName, jobTitle, jobDesc
   if (!ai?.isConfigured) {
     throw ApiError.serviceUnavailable('AI analysis is not configured on the server.', { code: 'AI_NOT_CONFIGURED' });
   }
-  const master = await MasterResume.findOne({ userId }).select('structuredResumeData fileHash extractorVersion').lean();
+  const master = await MasterResume.findOne({ userId }).select('structuredResumeData profileHash fileHash extractorVersion').lean();
   if (!master) {
-    throw ApiError.unprocessable('Upload your master resume before analysing a job description.', { code: 'MASTER_RESUME_REQUIRED' });
+    throw ApiError.unprocessable('Upload your master resume or complete your profile before analysing a job description.', { code: 'MASTER_RESUME_REQUIRED' });
   }
+  const masterHash = master.profileHash ?? master.fileHash;
 
   const result = await analyzeJobDescription({ jobTitle, jobDescription, resume: master.structuredResumeData, ai });
 
@@ -81,10 +83,10 @@ export async function createJobAnalysis(userId, { companyName, jobTitle, jobDesc
     matchAnalysis: result.matchAnalysis,
     matchPercentage: result.matchPercentage,
     analysisVersion: ANALYSIS_VERSION,
-    sourceResume: { masterResumeId: master._id, fileHash: master.fileHash, extractorVersion: master.extractorVersion },
+    sourceResume: { masterResumeId: master._id, fileHash: masterHash, extractorVersion: master.extractorVersion },
     ai: result.ai,
   });
-  return toPublicJobAnalysis(doc, { currentMasterHash: master.fileHash });
+  return toPublicJobAnalysis(doc, { currentMasterHash: masterHash });
 }
 
 export async function listJobAnalyses(userId, { page, limit }) {

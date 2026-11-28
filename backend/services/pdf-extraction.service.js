@@ -177,6 +177,10 @@ export const SECTION_KEYS = {
   'WORK EXPERIENCE': 'experience',
   PROJECTS: 'projects',
   EDUCATION: 'education',
+  CERTIFICATIONS: 'certifications',
+  CERTIFICATION: 'certifications',
+  'LICENSES & CERTIFICATIONS': 'certifications',
+  'COURSES & CERTIFICATIONS': 'certifications',
   ACHIEVEMENTS: 'achievements',
 };
 
@@ -271,7 +275,16 @@ function parseResume(paragraphs) {
         return { category, items: splitList(body.slice(body.indexOf(':') + 1)) };
       });
     } else if (key === 'achievements') resume.achievements = s.paragraphs.map((p) => stripBullet(p.text));
-    else resume[key] = parseEntries(s.paragraphs, key);
+    else if (key === 'certifications') {
+      resume.certifications = s.paragraphs.map((p) => {
+        const line = stripBullet(p.text);
+        const dateMatch = /\(([^)]+)\)\s*$/.exec(line);
+        const date = dateMatch ? dateMatch[1].trim() : '';
+        const withoutDate = dateMatch ? line.slice(0, dateMatch.index).trim() : line;
+        const [name, ...issuerParts] = withoutDate.split(/\s+[—–-]\s+/);
+        return { name: name.trim(), issuer: issuerParts.join(' — ').trim(), date, credentialId: '' };
+      });
+    } else resume[key] = parseEntries(s.paragraphs, key);
   }
   return { resume, sectionOrder, unknownSections };
 }
@@ -337,6 +350,83 @@ export async function extractResumeFromPdf(buffer) {
       structuredResumeData: { ...resume, sectionOrder },
       extractedContent,
       unknownSections,
+    };
+  } finally {
+    await pdf.destroy().catch(() => {});
+  }
+}
+
+/**
+ * Extracts raw reading-order text and metadata from any PDF layout (single-column, two-column,
+ * tables, arbitrary fonts) without enforcing classic-v1 typography rules.
+ * @throws {ExtractionError} INVALID_PDF | PDF_ENCRYPTED | NO_TEXT
+ */
+export async function extractRawPdfText(buffer) {
+  const pdf = await openPdf(buffer);
+  try {
+    const pages = [];
+    const fontSet = new Set();
+    const sizeSet = new Set();
+    const pageTexts = [];
+    let lineCount = 0;
+
+    for (let p = 1; p <= pdf.numPages; p++) {
+      const page = await pdf.getPage(p);
+      const [, , width, height] = page.view;
+      pages.push({ number: p, width, height });
+      await page.getOperatorList();
+      const content = await page.getTextContent();
+
+      let currentLine = '';
+      let prevY = null;
+      const lines = [];
+      for (const item of content.items) {
+        if (item.fontName) {
+          try {
+            const real = page.commonObjs.get(item.fontName)?.name ?? item.fontName;
+            fontSet.add(real.replace(/^[A-Z]{6}\+/, ''));
+          } catch {
+            fontSet.add(item.fontName);
+          }
+        }
+        const [a, b, , , , y] = item.transform;
+        const size = Math.round(Math.hypot(a, b) * 100) / 100;
+        if (item.str?.trim() && size > 0) sizeSet.add(size);
+
+        if (prevY !== null && Math.abs(y - prevY) > 2 && currentLine.trim()) {
+          lines.push(currentLine.replace(/\s+/g, ' ').trim());
+          currentLine = '';
+        }
+        currentLine += item.str ?? '';
+        if (item.hasEOL && currentLine.trim()) {
+          lines.push(currentLine.replace(/\s+/g, ' ').trim());
+          currentLine = '';
+          prevY = null;
+        } else if (item.str) {
+          prevY = y;
+        }
+      }
+      if (currentLine.trim()) lines.push(currentLine.replace(/\s+/g, ' ').trim());
+      lineCount += lines.length;
+      pageTexts.push(lines.join('\n'));
+    }
+
+    const text = pageTexts.join('\n\n').trim();
+    if (!text) {
+      throw new ExtractionError('NO_TEXT', 'No selectable text was found. The PDF looks scanned or image-only; upload the original exported PDF.');
+    }
+
+    return {
+      text,
+      extractedContent: {
+        pageCount: pages.length,
+        pageSize: { width: pages[0].width, height: pages[0].height },
+        fonts: [...fontSet],
+        fontSizes: [...sizeSet].sort((a, b) => a - b),
+        lineCount,
+        text,
+        lines: [],
+      },
     };
   } finally {
     await pdf.destroy().catch(() => {});

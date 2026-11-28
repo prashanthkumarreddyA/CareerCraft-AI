@@ -43,5 +43,11 @@ export function useMasterResume() {
     setState({ status: 'ready', resume: null, error: null });
   }, []);
 
-  return { ...state, upload, reload, uploadFile, remove };
+  const saveProfile = useCallback(async (profileData) => {
+    const resume = await masterApi.saveMasterProfile(profileData);
+    setState({ status: 'ready', resume, error: null });
+    return resume;
+  }, []);
+
+  return { ...state, upload, reload, uploadFile, remove, saveProfile };
 }

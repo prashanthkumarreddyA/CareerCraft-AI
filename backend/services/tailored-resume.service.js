@@ -102,7 +102,8 @@ async function findOwned(userId, id) {
 }
 
 async function currentMasterHash(userId) {
-  return (await MasterResume.findOne({ userId }).select('fileHash').lean())?.fileHash;
+  const doc = await MasterResume.findOne({ userId }).select('profileHash fileHash').lean();
+  return doc ? (doc.profileHash ?? doc.fileHash) : undefined;
 }
 
 /**
@@ -137,9 +138,10 @@ export async function createTailoredResume(userId, jobAnalysisId, ai) {
   if (!mongoose.isValidObjectId(jobAnalysisId)) throw ApiError.notFound('Job analysis not found.', { code: 'JOB_ANALYSIS_NOT_FOUND' });
   const analysis = await JobAnalysis.findOne({ _id: jobAnalysisId, userId }).lean();
   if (!analysis) throw ApiError.notFound('Job analysis not found.', { code: 'JOB_ANALYSIS_NOT_FOUND' });
-  const master = await MasterResume.findOne({ userId }).select('structuredResumeData fileHash').lean();
-  if (!master) throw ApiError.unprocessable('Upload your master resume first.', { code: 'MASTER_RESUME_REQUIRED' });
-  if (master.fileHash !== analysis.sourceResume?.fileHash) {
+  const master = await MasterResume.findOne({ userId }).select('structuredResumeData profileHash fileHash').lean();
+  if (!master) throw ApiError.unprocessable('Upload your master resume or complete your profile first.', { code: 'MASTER_RESUME_REQUIRED' });
+  const masterHash = master.profileHash ?? master.fileHash;
+  if (masterHash !== analysis.sourceResume?.fileHash) {
     throw ApiError.conflict('Your master resume changed after this analysis. Run a new analysis first so the evidence matches.', { code: 'ANALYSIS_STALE' });
   }
   if (!ai?.isConfigured) throw ApiError.serviceUnavailable('AI analysis is not configured on the server.', { code: 'AI_NOT_CONFIGURED' });
@@ -149,7 +151,7 @@ export async function createTailoredResume(userId, jobAnalysisId, ai) {
   const now = new Date();
   const doc = await insertVersion(userId, analysis._id, {
     masterResumeId: master._id,
-    sourceResumeHash: master.fileHash,
+    sourceResumeHash: masterHash,
     companyName: analysis.companyName,
     jobTitle: analysis.jobTitle,
     baseContent: master.structuredResumeData,
@@ -160,7 +162,7 @@ export async function createTailoredResume(userId, jobAnalysisId, ai) {
     ai: generated.ai,
     generatorVersion: GENERATOR_VERSION,
   });
-  return toPublicTailoredResume(doc, { currentMasterHash: master.fileHash });
+  return toPublicTailoredResume(doc, { currentMasterHash: masterHash });
 }
 
 export async function listTailoredResumes(userId, { jobAnalysisId } = {}) {

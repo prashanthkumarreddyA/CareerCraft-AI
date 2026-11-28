@@ -1,6 +1,7 @@
 import {
   createMasterResume,
   replaceMasterResume,
+  upsertMasterProfile,
   deleteMasterResume,
   getMasterResume,
   getMasterResumeFile,
@@ -10,14 +11,20 @@ import {
 } from '../services/master-resume.service.js';
 
 const storageOf = (req) => req.app.locals.storage;
+const aiOf = (req) => req.app.locals.ai;
 
 export async function uploadMaster(req, res) {
-  const masterResume = await createMasterResume(req.user.id, req.file, storageOf(req));
+  const masterResume = await createMasterResume(req.user.id, req.file, storageOf(req), aiOf(req));
   res.status(201).json({ success: true, data: { masterResume } });
 }
 
 export async function replaceMaster(req, res) {
-  const masterResume = await replaceMasterResume(req.user.id, req.file, storageOf(req));
+  const masterResume = await replaceMasterResume(req.user.id, req.file, storageOf(req), aiOf(req));
+  res.json({ success: true, data: { masterResume } });
+}
+
+export async function saveMasterProfile(req, res) {
+  const masterResume = await upsertMasterProfile(req.user.id, req.body);
   res.json({ success: true, data: { masterResume } });
 }
 

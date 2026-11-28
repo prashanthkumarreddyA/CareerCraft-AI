@@ -16,7 +16,7 @@ import { assertMasterCurrent, findOwnedTailoredResume, getTailoredResume, valida
  */
 
 const sha256 = (buf) => crypto.createHash('sha256').update(buf).digest('hex');
-const SECTIONS = ['personalInfo', 'headline', 'summary', 'technicalSkills', 'experience', 'projects', 'education', 'achievements', 'sectionOrder'];
+const SECTIONS = ['personalInfo', 'headline', 'summary', 'technicalSkills', 'experience', 'projects', 'education', 'certifications', 'achievements', 'sectionOrder'];
 
 /** Line-level comparison with the master resume rendered by the same engine. */
 export function compareWithMaster(tailored, master) {
@@ -66,7 +66,10 @@ export async function renderAndValidate(doc) {
   let template = null;
   let comparison = null;
   if (extraction) {
-    const differing = SECTIONS.filter((s) => !isDeepStrictEqual(extraction.structuredResumeData[s], content[s]));
+    const differing = SECTIONS.filter((s) => {
+      if (s === 'certifications' && !(content.certifications?.length) && !(extraction.structuredResumeData.certifications?.length)) return false;
+      return !isDeepStrictEqual(extraction.structuredResumeData[s], content[s]);
+    });
     roundTrip = { identical: differing.length === 0, differingSections: differing };
     if (differing.length) problems.push({ code: 'CONTENT_MISMATCH', message: `Text in the PDF differs from the approved content in: ${differing.join(', ')}.` });
     template = checkTemplateCompatibility(extraction);

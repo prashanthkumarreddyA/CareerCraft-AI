@@ -31,6 +31,12 @@ export async function deleteMasterResume() {
   await api.delete('/resumes/master');
 }
 
+/** Creates or updates the user's structured profile manually. */
+export async function saveMasterProfile(profileData) {
+  const { data } = await api.put('/resumes/master/profile', profileData);
+  return data.data.masterResume;
+}
+
 /** Original PDF as a Blob (streamed by the backend for the owner only). */
 export async function fetchMasterResumePdf({ signal } = {}) {
   const { data } = await api.get('/resumes/master/file', { responseType: 'blob', timeout: 60_000, signal });
